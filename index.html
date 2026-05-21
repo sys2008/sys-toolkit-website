@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>sys工具箱 - 本地大模型 & 精准数学计算</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="sys工具箱：纯本地运行的大模型工具箱，支持精准科学计算、智能方程求解、llama.cpp 与 MNN 端侧推理，安卓与鸿蒙双平台，隐私不出设备。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --accent: #22d3ee;
+      --accent2: #a78bfa;
+      --bg: #030712;
+      --bg-card: rgba(15, 23, 42, 0.6);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: rgba(148, 163, 184, 0.1);
+      --border-hover: rgba(148, 163, 184, 0.25);
+      --glow: rgba(99, 102, 241, 0.15);
+
+      /* 流体间距系统 */
+      --space-xs: clamp(8px, 1.5vw, 12px);
+      --space-sm: clamp(12px, 2vw, 20px);
+      --space-md: clamp(20px, 3.5vw, 36px);
+      --space-lg: clamp(36px, 6vw, 64px);
+      --space-xl: clamp(48px, 8vw, 96px);
+      --space-2xl: clamp(64px, 10vw, 120px);
+
+      /* 安全边距 */
+      --edge: clamp(20px, 4vw, 48px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ===== 粒子画布 ===== */
+    #particles {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+    }
+
+    /* ===== 全局光斑 ===== */
+    .glow-orb {
+      position: absolute; border-radius: 50%; filter: blur(120px);
+      pointer-events: none; z-index: 0;
+    }
+    .glow-orb-1 { width: clamp(300px, 40vw, 600px); height: clamp(300px, 40vw, 600px); background: rgba(99,102,241,0.07); top: -15%; left: -10%; }
+    .glow-orb-2 { width: clamp(250px, 35vw, 500px); height: clamp(250px, 35vw, 500px); background: rgba(34,211,238,0.05); top: 30%; right: -8%; }
+    .glow-orb-3 { width: clamp(200px, 30vw, 400px); height: clamp(200px, 30vw, 400px); background: rgba(167,139,250,0.06); bottom: 10%; left: 5%; }
+
+    /* ===== Container ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-left: var(--edge);
+      padding-right: var(--edge);
+      position: relative; z-index: 1;
+    }
+
+    /* ===== Header ===== */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px) saturate(180%);
+      background: rgba(3, 7, 18, 0.78);
+    }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: clamp(10px, 2vw, 16px) 0;
+    }
+    .brand { display: flex; align-items: center; gap: clamp(8px, 1.5vw, 14px); font-weight: 700; font-size: clamp(15px, 2vw, 18px); }
+    .brand-mark {
+      width: clamp(30px, 5vw, 38px); height: clamp(30px, 5vw, 38px); border-radius: clamp(8px, 1.2vw, 11px);
+      background: linear-gradient(135deg, var(--primary), var(--accent2), var(--accent));
+      background-size: 200% 200%;
+      animation: gradientShift 4s ease infinite;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: clamp(13px, 2vw, 17px); font-weight: 900;
+      box-shadow: 0 0 24px rgba(99,102,241,0.4);
+      flex-shrink: 0;
+    }
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .nav-links { display: flex; gap: clamp(4px, 1vw, 10px); font-size: clamp(12px, 1.5vw, 14px); color: var(--text-muted); align-items: center; }
+    .nav-links a {
+      padding: 6px clamp(8px, 1.2vw, 16px); border-radius: 8px;
+      transition: all 0.25s ease; white-space: nowrap;
+    }
+    .nav-links a:hover { color: white; background: rgba(255,255,255,0.06); }
+    .nav-cta {
+      border-radius: 10px !important; padding: 7px clamp(12px, 2vw, 20px) !important;
+      background: linear-gradient(135deg, var(--primary-dark), var(--accent2)) !important;
+      color: white !important; font-weight: 600 !important;
+      box-shadow: 0 0 20px rgba(99,102,241,0.3);
+      transition: all 0.3s ease !important;
+    }
+    .nav-cta:hover { box-shadow: 0 0 30px rgba(99,102,241,0.5) !important; transform: translateY(-1px); }
+    .menu-toggle {
+      display: none; background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: white; font-size: 18px; width: 40px; height: 40px;
+      border-radius: 10px; cursor: pointer; transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .menu-toggle:hover { background: rgba(255,255,255,0.1); }
+
+    /* ===== Hero ===== */
+    .hero {
+      padding: var(--space-xl) 0 var(--space-lg);
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: var(--space-lg);
+      align-items: center;
+      min-height: max(60vh, 400px);
+    }
+    .hero-kicker {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: clamp(11px, 1.4vw, 13px); letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: var(--space-sm);
+      padding: 5px clamp(10px, 2vw, 16px); border-radius: 999px;
+      background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.15);
+    }
+    .hero-kicker::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); animation: pulse 2s ease infinite; flex-shrink: 0;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .hero-title {
+      font-size: clamp(36px, 6vw, 72px); font-weight: 900;
+      line-height: 1.05; margin-bottom: var(--space-sm);
+      background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 40%, var(--accent2) 80%, var(--accent) 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero-subtitle {
+      font-size: clamp(14px, 2vw, 18px); color: var(--text-muted); max-width: 520px;
+      margin-bottom: var(--space-md); line-height: 1.8;
+    }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-bottom: var(--space-md); }
+    .hero-tag {
+      font-size: clamp(10px, 1.3vw, 12px); padding: 4px clamp(8px, 1.5vw, 12px); border-radius: 8px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      color: var(--text-muted); transition: all 0.3s; white-space: nowrap;
+    }
+    .hero-tag:hover { border-color: var(--primary); color: var(--primary-light); background: rgba(99,102,241,0.06); }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+    .btn-primary {
+      border-radius: 12px; padding: clamp(10px, 2vw, 14px) clamp(20px, 3vw, 28px);
+      background: linear-gradient(135deg, var(--primary), var(--accent2));
+      color: white; font-weight: 600; font-size: clamp(13px, 1.6vw, 15px);
+      box-shadow: 0 8px 32px rgba(99,102,241,0.35);
+      transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(99,102,241,0.5); }
+    .btn-ghost {
+      border-radius: 12px; padding: clamp(10px, 2vw, 14px) clamp(20px, 3vw, 28px);
+      border: 1px solid var(--border-hover); background: rgba(255,255,255,0.03);
+      color: var(--text); font-size: clamp(13px, 1.6vw, 15px); font-weight: 500;
+      transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px;
+      white-space: nowrap;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
+
+    /* ===== 手机模型 ===== */
+    .hero-visual { display: flex; justify-content: center; perspective: 1200px; }
+    .phone-mock {
+      width: clamp(220px, 22vw, 290px);
+      background: linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
+      border-radius: clamp(20px, 3vw, 32px); padding: clamp(8px, 1.2vw, 14px);
+      border: 1px solid rgba(148,163,184,0.15);
+      box-shadow:
+        0 40px 80px -20px rgba(0,0,0,0.8),
+        0 0 60px rgba(99,102,241,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      transform: rotateY(-8deg) rotateX(4deg);
+      transition: transform 0.5s ease;
+    }
+    .phone-mock:hover { transform: rotateY(-2deg) rotateX(1deg) scale(1.02); }
+    .phone-notch {
+      width: clamp(60px, 8vw, 100px); height: clamp(18px, 2.5vw, 28px);
+      margin: 0 auto clamp(6px, 1vw, 12px);
+      border-radius: 0 0 clamp(8px, 1.5vw, 16px) clamp(8px, 1.5vw, 16px);
+      background: #0f172a; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .phone-screen {
+      background: linear-gradient(180deg, #0c1222, #0f172a);
+      border-radius: clamp(14px, 2vw, 22px); padding: clamp(10px, 1.5vw, 16px);
+      min-height: clamp(260px, 28vw, 380px);
+      display: flex; flex-direction: column; gap: clamp(6px, 1vw, 10px);
+    }
+    .phone-status { display: flex; justify-content: space-between; font-size: 10px; color: #64748b; }
+    .phone-app-header { display: flex; justify-content: space-between; align-items: center; }
+    .phone-title { font-size: clamp(12px, 1.5vw, 15px); font-weight: 700; }
+    .phone-ai-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; flex-shrink: 0; }
+    .phone-input {
+      border-radius: clamp(8px, 1.2vw, 12px); background: rgba(15,23,42,0.8);
+      border: 1px solid rgba(99,102,241,0.2); padding: clamp(6px, 1vw, 10px) clamp(8px, 1.2vw, 12px);
+      font-size: clamp(13px, 1.8vw, 18px); color: #e2e8f0; font-family: 'Inter', monospace; font-weight: 600;
+    }
+    .phone-result {
+      border-radius: clamp(8px, 1.2vw, 12px); background: rgba(99,102,241,0.06);
+      padding: clamp(6px, 1vw, 10px) clamp(8px, 1.2vw, 12px);
+      font-size: clamp(11px, 1.4vw, 14px); color: #c7d2fe;
+      border: 1px solid rgba(99,102,241,0.1);
+    }
+    .phone-equation {
+      border-radius: clamp(8px, 1.2vw, 12px); background: rgba(34,211,238,0.06);
+      padding: clamp(5px, 0.8vw, 8px) clamp(8px, 1.2vw, 12px);
+      font-size: clamp(10px, 1.3vw, 13px); color: #a5f3fc;
+      border: 1px solid rgba(34,211,238,0.1);
+    }
+    .phone-chip-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: auto; }
+    .phone-chip {
+      font-size: clamp(8px, 1vw, 10px); padding: 2px 6px; border-radius: 5px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8;
+    }
+    .phone-ai-bubble {
+      border-radius: clamp(10px, 1.5vw, 14px); border-bottom-left-radius: 4px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(167,139,250,0.08));
+      padding: clamp(7px, 1vw, 10px) clamp(8px, 1.2vw, 12px);
+      font-size: clamp(9px, 1.2vw, 12px); color: #c7d2fe;
+      border: 1px solid rgba(99,102,241,0.12); position: relative;
+    }
+    .phone-ai-bubble::before { content: '🦙'; position: absolute; top: -7px; left: 8px; font-size: clamp(10px, 1.2vw, 14px); }
+
+    /* ===== Stats ===== */
+    .stats {
+      padding: var(--space-lg) 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(15,23,42,0.3);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-md);
+      text-align: center;
+    }
+    .stat-number {
+      font-size: clamp(24px, 4vw, 42px); font-weight: 800;
+      background: linear-gradient(135deg, var(--primary-light), var(--accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      line-height: 1.2;
+    }
+    .stat-label { font-size: clamp(11px, 1.4vw, 13px); color: var(--text-muted); margin-top: 4px; }
+
+    /* ===== Sections ===== */
+    section { padding: var(--space-xl) 0; position: relative; }
+    section.dark { background: linear-gradient(180deg, rgba(15,23,42,0.2), transparent); }
+    .section-kicker {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: clamp(10px, 1.3vw, 12px); letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: var(--space-sm);
+      padding: 4px clamp(8px, 1.5vw, 14px); border-radius: 999px;
+      background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.1);
+    }
+    .section-title {
+      font-size: clamp(24px, 4vw, 40px); font-weight: 800;
+      margin-bottom: var(--space-sm); line-height: 1.2;
+    }
+    .section-desc {
+      font-size: clamp(14px, 1.8vw, 16px); color: var(--text-muted);
+      max-width: 600px; margin-bottom: var(--space-lg); line-height: 1.8;
+    }
+
+    /* ===== Feature Cards ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      gap: var(--space-md);
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border-radius: clamp(14px, 2vw, 20px); padding: clamp(18px, 3vw, 28px);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.3), transparent);
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .feature-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px -12px rgba(0,0,0,0.5), 0 0 40px var(--glow);
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: clamp(36px, 5vw, 44px); height: clamp(36px, 5vw, 44px);
+      border-radius: clamp(10px, 1.5vw, 12px);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: var(--space-sm); font-size: clamp(18px, 2.5vw, 22px);
+      background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(167,139,250,0.08));
+      border: 1px solid rgba(99,102,241,0.1);
+    }
+    .feature-title { font-size: clamp(14px, 1.8vw, 17px); font-weight: 700; margin-bottom: 6px; }
+    .feature-desc { font-size: clamp(12px, 1.5vw, 14px); color: var(--text-muted); line-height: 1.7; }
+
+    /* ===== Platform ===== */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+      gap: var(--space-md);
+    }
+    .platform-card {
+      background: var(--bg-card);
+      border-radius: clamp(16px, 2.5vw, 24px); padding: clamp(20px, 3vw, 28px);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      transition: all 0.4s ease;
+      position: relative; overflow: hidden;
+    }
+    .platform-card::after {
+      content: ''; position: absolute; top: -50%; right: -50%;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: radial-gradient(circle, var(--glow), transparent 70%);
+      pointer-events: none; transition: all 0.5s;
+    }
+    .platform-card:hover { border-color: var(--border-hover); transform: translateY(-4px); }
+    .platform-card:hover::after { opacity: 1.5; }
+    .platform-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm); position: relative; z-index: 1; flex-wrap: wrap; gap: var(--space-xs); }
+    .platform-title { font-size: clamp(16px, 2.2vw, 20px); font-weight: 700; }
+    .platform-badge {
+      font-size: clamp(10px, 1.2vw, 11px); padding: 3px clamp(8px, 1.2vw, 12px); border-radius: 8px; font-weight: 600;
+      letter-spacing: 0.05em; white-space: nowrap;
+    }
+    .badge-android { background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.15); }
+    .badge-harmony { background: rgba(99,102,241,0.1); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.15); }
+    .platform-desc { font-size: clamp(12px, 1.5vw, 14px); color: var(--text-muted); margin-bottom: var(--space-sm); position: relative; z-index: 1; line-height: 1.7; }
+    .platform-features { font-size: clamp(12px, 1.5vw, 14px); color: var(--text-muted); margin-bottom: var(--space-md); position: relative; z-index: 1; }
+    .platform-features li {
+      margin-bottom: 6px; list-style: none; position: relative; padding-left: 22px;
+      transition: color 0.2s;
+    }
+    .platform-features li::before { content: '✓'; position: absolute; left: 0; color: #4ade80; font-weight: 700; }
+    .platform-features li:hover { color: var(--text); }
+    .platform-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); position: relative; z-index: 1; }
+    .platform-meta { margin-top: var(--space-sm); font-size: clamp(10px, 1.2vw, 12px); color: #64748b; position: relative; z-index: 1; }
+    .repo-link { color: var(--primary-light); transition: color 0.2s; }
+    .repo-link:hover { color: var(--accent); }
+
+    /* ===== Changelog ===== */
+    .changelog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+      gap: var(--space-md);
+    }
+    .changelog-column {
+      background: var(--bg-card); border-radius: clamp(14px, 2vw, 20px);
+      padding: clamp(18px, 3vw, 24px);
+      border: 1px solid var(--border); backdrop-filter: blur(12px);
+    }
+    .changelog-column h3 {
+      font-size: clamp(14px, 1.8vw, 17px); font-weight: 700; margin-bottom: var(--space-sm);
+      padding-bottom: var(--space-xs); border-bottom: 1px solid var(--border);
+    }
+    .changelog-list { font-size: clamp(12px, 1.5vw, 14px); color: var(--text-muted); }
+    .changelog-list li {
+      margin-bottom: var(--space-sm); list-style: none; position: relative; padding-left: 18px; line-height: 1.6;
+    }
+    .changelog-list li::before {
+      content: ''; position: absolute; left: 0; top: 8px;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--primary); box-shadow: 0 0 8px var(--primary);
+    }
+    .changelog-version {
+      display: inline-block; font-size: clamp(9px, 1.2vw, 11px); padding: 2px 7px;
+      border-radius: 5px; font-weight: 600;
+      background: rgba(99,102,241,0.1); color: var(--primary-light);
+      border: 1px solid rgba(99,102,241,0.12); margin-right: 5px;
+    }
+    .changelog-more { margin-top: var(--space-md); font-size: clamp(11px, 1.3vw, 13px); color: var(--text-muted); }
+    .changelog-more a { color: var(--primary-light); transition: color 0.2s; }
+    .changelog-more a:hover { color: var(--accent); }
+
+    /* ===== Open Source ===== */
+    .oss-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+      gap: var(--space-md);
+    }
+    .oss-card {
+      background: var(--bg-card); border-radius: clamp(14px, 2vw, 18px);
+      padding: clamp(16px, 2.5vw, 24px);
+      border: 1px solid var(--border); backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+    .oss-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+    .oss-title { font-size: clamp(13px, 1.6vw, 16px); font-weight: 700; margin-bottom: 6px; }
+    .oss-desc { font-size: clamp(11px, 1.4vw, 13px); color: var(--text-muted); margin-bottom: var(--space-xs); line-height: 1.7; }
+    .oss-meta { font-size: clamp(10px, 1.2vw, 12px); color: #64748b; }
+    .oss-meta a { color: var(--primary-light); }
+
+    /* ===== Developer ===== */
+    .dev-card {
+      background: var(--bg-card); border-radius: clamp(16px, 2.5vw, 24px);
+      padding: clamp(24px, 4vw, 36px);
+      border: 1px solid var(--border); backdrop-filter: blur(12px);
+      max-width: 600px; margin: 0 auto; text-align: center;
+    }
+    .dev-avatar {
+      width: clamp(56px, 8vw, 72px); height: clamp(56px, 8vw, 72px);
+      border-radius: clamp(14px, 2vw, 20px); margin: 0 auto var(--space-sm);
+      background: linear-gradient(135deg, var(--primary), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: clamp(20px, 3vw, 28px); font-weight: 900; color: white;
+      box-shadow: 0 8px 32px rgba(99,102,241,0.3);
+    }
+    .dev-title { font-size: clamp(16px, 2.2vw, 20px); font-weight: 700; margin-bottom: var(--space-xs); }
+    .dev-desc { font-size: clamp(12px, 1.5vw, 14px); color: var(--text-muted); margin-bottom: var(--space-md); line-height: 1.7; }
+    .dev-links { display: flex; flex-wrap: wrap; gap: var(--space-xs); justify-content: center; }
+
+    /* ===== Footer ===== */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: clamp(20px, 3vw, 32px) 0;
+      font-size: clamp(11px, 1.3vw, 13px); color: var(--text-muted);
+      background: rgba(15,23,42,0.3);
+    }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-sm); align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: clamp(10px, 2vw, 20px); }
+    .footer-links a { transition: color 0.2s; }
+    .footer-links a:hover { color: var(--primary-light); }
+
+    /* ===== Animations ===== */
+    .reveal {
+      opacity: 0; transform: translateY(30px);
+      transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    /* =============================
+       响应式断点 - 渐进式适配
+       ============================= */
+
+    /* ---- ≤1280px：微调，避免内容贴边 ---- */
+    @media (max-width: 1280px) {
+      .hero { gap: var(--space-md); }
+    }
+
+    /* ---- ≤1024px：平板竖屏 ---- */
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr 0.9fr;
+        gap: var(--space-md);
+      }
+      .stats-grid { gap: var(--space-sm); }
+    }
+
+    /* ---- ≤900px：大手机 / 小平板 ---- */
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        min-height: auto;
+        padding-top: var(--space-lg);
+      }
+      .hero-subtitle { margin-left: auto; margin-right: auto; }
+      .hero-tags { justify-content: center; }
+      .hero-actions { justify-content: center; }
+      .hero-visual { display: none; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ---- ≤768px：手机横屏 / 小平板竖屏 ---- */
+    @media (max-width: 768px) {
+      .menu-toggle { display: flex; align-items: center; justify-content: center; }
+      .nav-links {
+        display: none; position: absolute; top: 100%; left: 0; right: 0;
+        background: rgba(3,7,18,0.98); backdrop-filter: blur(20px);
+        flex-direction: column; padding: var(--space-sm); gap: 2px;
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-links.active { display: flex; }
+      .nav-links a { padding: 12px 16px; border-radius: 10px; }
+      .nav-cta {
+        background: none !important; box-shadow: none !important;
+        border: none !important; padding: 12px 16px !important;
+        text-align: left !important;
+      }
+    }
+
+    /* ---- ≤640px：大手机竖屏 ---- */
+    @media (max-width: 640px) {
+      .hero-actions {
+        flex-direction: column; width: 100%;
+      }
+      .hero-actions .btn-primary,
+      .hero-actions .btn-ghost {
+        width: 100%; justify-content: center;
+      }
+      .platform-actions {
+        flex-direction: column;
+      }
+      .platform-actions .btn-primary,
+      .platform-actions .btn-ghost {
+        width: 100%; justify-content: center; text-align: center;
+      }
+      .dev-links { flex-direction: column; }
+      .dev-links .btn-ghost { width: 100%; justify-content: center; }
+    }
+
+    /* ---- ≤480px：小手机 ---- */
+    @media (max-width: 480px) {
+      :root { --edge: 16px; }
+      .hero-tags { gap: 6px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+      .stat-number { font-size: clamp(22px, 7vw, 32px); }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- Header -->
+<header>
+  <div class="container">
+    <nav>
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div>sys工具箱</div>
+      </div>
+      <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
+      <div class="nav-links" id="navLinks">
+        <a href="#features">特性</a>
+        <a href="#platforms">平台</a>
+        <a href="#changelog">更新日志</a>
+        <a href="#oss">开源</a>
+        <a href="#about">关于</a>
+        <a class="nav-cta" href="#platforms">立即下载</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section id="top" style="position:relative; overflow:hidden;">
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+    <div class="container hero">
+      <div>
+        <div class="hero-kicker reveal">纯本地 · 大模型 · 数学工具箱</div>
+        <h1 class="hero-title reveal reveal-delay-1">sys工具箱</h1>
+        <p class="hero-subtitle reveal reveal-delay-2">
+          纯本地化的 AI 与数学计算工具集。无需联网，数据不出端，在提供强大本地大模型推理能力的同时，兼顾专业级别的数学计算需求。
+        </p>
+        <div class="hero-tags reveal reveal-delay-3">
+          <span class="hero-tag">llama.cpp 本地大模型</span>
+          <span class="hero-tag">MNN 端侧推理</span>
+          <span class="hero-tag">精准科学计算器</span>
+          <span class="hero-tag">智能方程求解</span>
+          <span class="hero-tag">100% 本地隐私</span>
+        </div>
+        <div class="hero-actions reveal reveal-delay-4">
+          <a class="btn-primary" href="#platforms">⬇ 选择平台版本</a>
+          <a class="btn-ghost" href="#changelog">📋 更新日志</a>
+        </div>
+      </div>
+      <div class="hero-visual reveal reveal-delay-3">
+        <div class="phone-mock">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>12:00</span><span>📶 🔋</span></div>
+            <div class="phone-app-header">
+              <div class="phone-title">sys工具箱</div>
+              <div class="phone-ai-dot" title="本地模型已就绪"></div>
+            </div>
+            <div class="phone-input">2√2 × 13/13</div>
+            <div class="phone-result">= 2√2 ≈ 2.8284...</div>
+            <div class="phone-equation">📐 x² + 2x + 1 = 0 → x = -1</div>
+            <div class="phone-chip-row">
+              <span class="phone-chip">保留根号</span>
+              <span class="phone-chip">保留分数</span>
+              <span class="phone-chip">解方程</span>
+              <span class="phone-chip">本地AI</span>
+            </div>
+            <div class="phone-ai-bubble">本地 Qwen 模型已加载，完全断网可用，数据不出端 🛡️</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="reveal">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">本地运行，数据不出端</div>
+        </div>
+        <div class="reveal reveal-delay-1">
+          <div class="stat-number">2</div>
+          <div class="stat-label">推理引擎（llama.cpp + MNN）</div>
+        </div>
+        <div class="reveal reveal-delay-2">
+          <div class="stat-number">2</div>
+          <div class="stat-label">平台（Android + HarmonyOS）</div>
+        </div>
+        <div class="reveal reveal-delay-3">
+          <div class="stat-number">0</div>
+          <div class="stat-label">需要联网的功能</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="dark" style="position:relative; overflow:hidden;">
+    <div class="glow-orb glow-orb-3"></div>
+    <div class="container">
+      <div class="section-kicker reveal">核心能力</div>
+      <h2 class="section-title reveal reveal-delay-1">精准计算 + 本地大模型<br/>一个工具箱全搞定</h2>
+      <p class="section-desc reveal reveal-delay-2">
+        专业级数学计算与本地大模型推理合二为一：计算器不再只有近似小数，AI 也不再必须上传云端。
+      </p>
+      <div class="features-grid">
+        <article class="feature-card reveal">
+          <div class="feature-icon">🧮</div>
+          <h3 class="feature-title">精准科学计算器</h3>
+          <p class="feature-desc">内置专业数学解析引擎，支持<strong>保留根号与保留分数</strong>的精确计算逻辑，杜绝浮点数精度丢失，还原最真实的数学结果。</p>
+        </article>
+        <article class="feature-card reveal reveal-delay-1">
+          <div class="feature-icon">📐</div>
+          <h3 class="feature-title">智能方程求解</h3>
+          <p class="feature-desc">支持各类常见方程的输入与自动解析（涵盖一元一次方程、一元二次方程等），直接输出准确解，学习与工作中的得力辅助工具。</p>
+        </article>
+        <article class="feature-card reveal reveal-delay-2">
+          <div class="feature-icon">🦙</div>
+          <h3 class="feature-title">llama.cpp 本地大模型</h3>
+          <p class="feature-desc">深度集成 llama.cpp 推理框架，支持设备端直接加载并运行 GGUF 格式的开源大语言模型（Qwen、Llama 等），完全断网可用。</p>
+        </article>
+        <article class="feature-card reveal reveal-delay-3">
+          <div class="feature-icon">⚡</div>
+          <h3 class="feature-title">MNN 端侧推理加速</h3>
+          <p class="feature-desc">接入阿里巴巴开源的 MNN 推理引擎，针对端侧设备底层极致优化，提供除 llama.cpp 外的第二种高效本地大模型运行方案。</p>
+        </article>
+        <article class="feature-card reveal reveal-delay-4">
+          <div class="feature-icon">🛡️</div>
+          <h3 class="feature-title">纯本地隐私护城河</h3>
+          <p class="feature-desc">所有计算与 AI 推理过程 100% 在设备本地完成。不收集、不上传、不依赖云端接口，将数据隐私的主动权彻底交还给用户。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Platforms -->
+  <section id="platforms">
+    <div class="container">
+      <div class="section-kicker reveal">双平台版本</div>
+      <h2 class="section-title reveal reveal-delay-1">安卓与鸿蒙<br/>本地大模型都能用</h2>
+      <p class="section-desc reveal reveal-delay-2">
+        同一工具箱，两种原生体验。安卓端提供完整的 APK 与模型市场；鸿蒙端深度适配 HarmonyOS，从底层到 UI 全部原生。
+      </p>
+      <div class="platform-grid">
+        <article class="platform-card reveal">
+          <div class="platform-head">
+            <div class="platform-title">sys工具箱 · 安卓版</div>
+            <span class="platform-badge badge-android">Android</span>
+          </div>
+          <p class="platform-desc">
+            基于 llama.cpp 与 MNN，在安卓设备上实现本地大模型推理与专业数学计算。
+          </p>
+          <ul class="platform-features">
+            <li>🧮 精准科学计算器，保留根号与分数</li>
+            <li>📐 智能方程求解（一元一次 / 一元二次等）</li>
+            <li>🦙 GGUF 本地大模型（Qwen / Llama 等）</li>
+            <li>⚡ MNN 引擎 + 模型市场 + 视觉模型支持</li>
+            <li>🛡️ 100% 本地运行，数据不出端</li>
+          </ul>
+          <div class="platform-actions">
+            <a class="btn-primary" href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank" rel="noopener">⬇ 下载 APK</a>
+          </div>
+        </article>
+        <article class="platform-card reveal reveal-delay-2">
+          <div class="platform-head">
+            <div class="platform-title">sys工具箱 · 鸿蒙版</div>
+            <span class="platform-badge badge-harmony">HarmonyOS</span>
+          </div>
+          <p class="platform-desc">
+            专为 HarmonyOS 打造的纯本地化 AI 与数学计算工具集，深度适配鸿蒙原生体验。
+          </p>
+          <ul class="platform-features">
+            <li>🧮 精准科学计算器</li>
+            <li>📐 智能方程求解</li>
+            <li>🦙 llama.cpp 本地大模型（GGUF）</li>
+            <li>⚡ MNN 端侧推理加速</li>
+            <li>🛡️ 纯本地隐私护城河</li>
+            <li>🎨 鸿蒙原生体验，适配系统设计规范</li>
+          </ul>
+          <div class="platform-actions">
+            <a class="btn-primary" href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank" rel="noopener">⬇ 下载 HAP</a>
+            <a class="btn-ghost" href="https://appgallery.huawei.com/app/detail?id=com.songyangshuo.calculator_ohos&channelId=SHARE&source=appshare" target="_blank" rel="noopener">📱 华为应用市场</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Changelog -->
+  <section id="changelog" class="dark">
+    <div class="container">
+      <div class="section-kicker reveal">更新日志</div>
+      <h2 class="section-title reveal reveal-delay-1">从计算器到工具箱<br/>持续进化</h2>
+      <p class="section-desc reveal reveal-delay-2">
+        以下是安卓版与鸿蒙版最近几个重要版本的更新概览，更多细节可查看各仓库的 Releases 页面。
+      </p>
+      <div class="changelog-grid">
+        <div class="changelog-column reveal">
+          <h3>🤖 安卓版</h3>
+          <ul class="changelog-list">
+            <li><span class="changelog-version">v5.0.2</span>优化一元二次方程结果展示与计算方法；修复若干已知问题</li>
+            <li><span class="changelog-version">v5.0.1</span>修复 gguf 流式输出与三角函数复杂运算；新增小数阶乘；修复闪退</li>
+            <li><span class="changelog-version">v5.0.0</span>更名为「sys工具箱」；新增 MNN 引擎、模型市场、视觉模型、历史记录</li>
+            <li><span class="changelog-version">v4.0.1</span>添加解方程输入解析；精确/小数模式切换；保留根号；科学计数法</li>
+            <li><span class="changelog-version">v4.0.0</span>全新重构，体积减小 40%；新增本地 AI 助手、深度思考、深色模式等</li>
+          </ul>
+        </div>
+        <div class="changelog-column reveal reveal-delay-2">
+          <h3>🔷 鸿蒙版</h3>
+          <ul class="changelog-list">
+            <li><span class="changelog-version">v4.1.1</span>修复已知问题，提升稳定性</li>
+            <li><span class="changelog-version">v4.0.2</span>适配 API 23 沉浸光感视效</li>
+            <li><span class="changelog-version">v4.0.1</span>鸿蒙版正式发布，含科学计算器、解方程、GGUF 模型运行</li>
+          </ul>
+        </div>
+      </div>
+      <div class="changelog-more reveal">
+        完整更新日志：
+        <a href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank" rel="noopener">安卓版 Releases</a> /
+        <a href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank" rel="noopener">鸿蒙版 Releases</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Open Source -->
+  <section id="oss">
+    <div class="container">
+      <div class="section-kicker reveal">开源与鸣谢</div>
+      <h2 class="section-title reveal reveal-delay-1">站在优秀开源项目的肩膀上</h2>
+      <p class="section-desc reveal reveal-delay-2">
+        sys工具箱的实现离不开以下优秀的开源项目与生态，也欢迎更多开发者参与贡献。
+      </p>
+      <div class="oss-grid">
+        <article class="oss-card reveal">
+          <h3 class="oss-title">llama.cpp</h3>
+          <p class="oss-desc">极致轻量化 LLM 推理框架，sys工具箱本地大模型运行的基石。</p>
+        </article>
+        <article class="oss-card reveal reveal-delay-1">
+          <h3 class="oss-title">MNN</h3>
+          <p class="oss-desc">阿里巴巴开源的高效轻量级深度学习推理引擎，为端侧加速提供强大支持。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="about" class="dark">
+    <div class="container">
+      <div class="section-kicker reveal">关于开发者</div>
+      <h2 class="section-title reveal reveal-delay-1" style="text-align:center;">独立开发，持续打磨</h2>
+      <div class="dev-card reveal reveal-delay-2">
+        <div class="dev-avatar">SY</div>
+        <h3 class="dev-title">宋阳烁 / sys</h3>
+        <p class="dev-desc">
+          sys工具箱由宋阳烁独立开发，专注于本地大模型与端侧 AI 应用。项目从「sys计算器」起步，逐步演进为涵盖数学计算与本地大模型的综合工具箱，始终坚持"纯本地、隐私优先"的设计理念。
+        </p>
+        <div class="dev-links">
+          <a class="btn-ghost" href="https://gitee.com/sys200812" target="_blank" rel="noopener">🏠 Gitee 主页</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>© 2025 sys2008 · sys工具箱 · 项目托管于 <a href="https://gitee.com/sys200812" style="color:var(--primary-light)">Gitee</a></div>
+      <div class="footer-links">
+        <a href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank">安卓版下载</a>
+        <a href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank">鸿蒙版下载</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ===== Mobile Menu =====
+const menuToggle = document.getElementById('menuToggle');
+const navLinks = document.getElementById('navLinks');
+menuToggle.addEventListener('click', () => {
+  navLinks.classList.toggle('active');
+  menuToggle.textContent = navLinks.classList.contains('active') ? '✕' : '☰';
+});
+document.querySelectorAll('.nav-links a').forEach(link => {
+  link.addEventListener('click', () => {
+    navLinks.classList.remove('active');
+    menuToggle.textContent = '☰';
+  });
+});
+
+// ===== Scroll Reveal =====
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ===== Particle Background =====
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let mouse = { x: null, y: null };
+let animId;
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    resize();
+    initParticles();
+  }, 200);
+});
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.size = Math.random() * 1.5 + 0.5;
+    this.speedX = (Math.random() - 0.5) * 0.3;
+    this.speedY = (Math.random() - 0.5) * 0.3;
+    this.opacity = Math.random() * 0.4 + 0.1;
+  }
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+    if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(99, 102, 241, ${this.opacity})`;
+    ctx.fill();
+  }
+}
+
+function initParticles() {
+  const count = Math.min(70, Math.floor(canvas.width * canvas.height / 18000));
+  particles = [];
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle());
+  }
+}
+initParticles();
+
+function connectParticles() {
+  const maxDist = 110;
+  for (let a = 0; a < particles.length; a++) {
+    for (let b = a + 1; b < particles.length; b++) {
+      const dx = particles[a].x - particles[b].x;
+      const dy = particles[a].y - particles[b].y;
+      const dist = dx * dx + dy * dy;
+      if (dist < maxDist * maxDist) {
+        const opacity = (1 - Math.sqrt(dist) / maxDist) * 0.08;
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(99, 102, 241, ${opacity})`;
+        ctx.lineWidth = 0.5;
+        ctx.moveTo(particles[a].x, particles[a].y);
+        ctx.lineTo(particles[b].x, particles[b].y);
+        ctx.stroke();
+      }
+    }
+    if (mouse.x !== null) {
+      const dx = particles[a].x - mouse.x;
+      const dy = particles[a].y - mouse.y;
+      const dist = dx * dx + dy * dy;
+      const maxMouse = 140;
+      if (dist < maxMouse * maxMouse) {
+        const opacity = (1 - Math.sqrt(dist) / maxMouse) * 0.15;
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(34, 211, 238, ${opacity})`;
+        ctx.lineWidth = 0.5;
+        ctx.moveTo(particles[a].x, particles[a].y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => { p.update(); p.draw(); });
+  connectParticles();
+  animId = requestAnimationFrame(animate);
+}
+animate();
+
+// 减少动画偏好
+if (window.matchMedia('(prefers-reduced-motion: reduce').matches) {
+  cancelAnimationFrame(animId);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+</script>
+</body>
+</html>
