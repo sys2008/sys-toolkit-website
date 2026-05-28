@@ -5,6 +5,8 @@
   <title>sys工具箱 - 本地大模型 & 精准数学计算</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="description" content="sys工具箱：纯本地运行的大模型工具箱，支持精准科学计算、智能方程求解、llama.cpp 与 MNN 端侧推理，安卓与鸿蒙双平台，隐私不出设备。" />
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -89,10 +91,10 @@
       background-size: 200% 200%;
       animation: gradientShift 4s ease infinite;
       display: flex; align-items: center; justify-content: center;
-      color: white; font-size: clamp(13px, 2vw, 17px); font-weight: 900;
       box-shadow: 0 0 24px rgba(99,102,241,0.4);
-      flex-shrink: 0;
+      flex-shrink: 0; overflow: hidden;
     }
+    .brand-mark img { width: 100%; height: 100%; object-fit: cover; }
     @keyframes gradientShift {
       0%, 100% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
@@ -390,6 +392,16 @@
     .changelog-more { margin-top: var(--space-md); font-size: clamp(11px, 1.3vw, 13px); color: var(--text-muted); }
     .changelog-more a { color: var(--primary-light); transition: color 0.2s; }
     .changelog-more a:hover { color: var(--accent); }
+    .changelog-loading { opacity: 0.5; animation: changelogPulse 1.8s ease infinite; }
+    @keyframes changelogPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+    .changelog-list li.collapsed { display: none; }
+    .changelog-toggle {
+      display: block; width: 100%; margin-top: var(--space-xs); padding: 6px 0;
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      color: var(--primary-light); font-size: clamp(11px, 1.3vw, 12px);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .changelog-toggle:hover { border-color: var(--primary); background: rgba(99,102,241,0.06); }
 
     /* ===== Open Source ===== */
     .oss-grid {
@@ -543,7 +555,7 @@
   <div class="container">
     <nav>
       <div class="brand">
-        <div class="brand-mark">S</div>
+        <div class="brand-mark"><img src="icon.png" alt="sys工具箱"></div>
         <div>sys工具箱</div>
       </div>
       <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
@@ -696,8 +708,9 @@
             <li>🛡️ 100% 本地运行，数据不出端</li>
           </ul>
           <div class="platform-actions">
-            <a class="btn-primary" href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank" rel="noopener">⬇ 下载 APK</a>
+            <a id="downloadApk" class="btn-primary" href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank" rel="noopener">⬇ 下载 APK</a>
           </div>
+          <div class="platform-meta" id="androidMeta">正在获取最新版本...</div>
         </article>
         <article class="platform-card reveal reveal-delay-2">
           <div class="platform-head">
@@ -716,9 +729,10 @@
             <li>🎨 鸿蒙原生体验，适配系统设计规范</li>
           </ul>
           <div class="platform-actions">
-            <a class="btn-primary" href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank" rel="noopener">⬇ 下载 HAP</a>
+            <a id="downloadHap" class="btn-primary" href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank" rel="noopener">⬇ 下载 HAP</a>
             <a class="btn-ghost" href="https://appgallery.huawei.com/app/detail?id=com.songyangshuo.calculator_ohos&channelId=SHARE&source=appshare" target="_blank" rel="noopener">📱 华为应用市场</a>
           </div>
+          <div class="platform-meta" id="harmonyMeta">正在获取最新版本...</div>
         </article>
       </div>
     </div>
@@ -730,26 +744,22 @@
       <div class="section-kicker reveal">更新日志</div>
       <h2 class="section-title reveal reveal-delay-1">从计算器到工具箱<br/>持续进化</h2>
       <p class="section-desc reveal reveal-delay-2">
-        以下是安卓版与鸿蒙版最近几个重要版本的更新概览，更多细节可查看各仓库的 Releases 页面。
+        数据实时同步自 Gitee Releases，展示安卓版与鸿蒙版的最新更新内容。
       </p>
       <div class="changelog-grid">
         <div class="changelog-column reveal">
           <h3>🤖 安卓版</h3>
-          <ul class="changelog-list">
-            <li><span class="changelog-version">v5.0.2</span>优化一元二次方程结果展示与计算方法；修复若干已知问题</li>
-            <li><span class="changelog-version">v5.0.1</span>修复 gguf 流式输出与三角函数复杂运算；新增小数阶乘；修复闪退</li>
-            <li><span class="changelog-version">v5.0.0</span>更名为「sys工具箱」；新增 MNN 引擎、模型市场、视觉模型、历史记录</li>
-            <li><span class="changelog-version">v4.0.1</span>添加解方程输入解析；精确/小数模式切换；保留根号；科学计数法</li>
-            <li><span class="changelog-version">v4.0.0</span>全新重构，体积减小 40%；新增本地 AI 助手、深度思考、深色模式等</li>
+          <ul class="changelog-list" id="androidChangelog">
+            <li class="changelog-loading">加载中...</li>
           </ul>
+          <button class="changelog-toggle" id="androidToggle" style="display:none" onclick="toggleChangelog('androidChangelog','androidToggle')">展开全部 ▾</button>
         </div>
         <div class="changelog-column reveal reveal-delay-2">
           <h3>🔷 鸿蒙版</h3>
-          <ul class="changelog-list">
-            <li><span class="changelog-version">v4.1.1</span>修复已知问题，提升稳定性</li>
-            <li><span class="changelog-version">v4.0.2</span>适配 API 23 沉浸光感视效</li>
-            <li><span class="changelog-version">v4.0.1</span>鸿蒙版正式发布，含科学计算器、解方程、GGUF 模型运行</li>
+          <ul class="changelog-list" id="harmonyChangelog">
+            <li class="changelog-loading">加载中...</li>
           </ul>
+          <button class="changelog-toggle" id="harmonyToggle" style="display:none" onclick="toggleChangelog('harmonyChangelog','harmonyToggle')">展开全部 ▾</button>
         </div>
       </div>
       <div class="changelog-more reveal">
@@ -806,14 +816,155 @@
     <div class="footer-inner">
       <div>© 2025 sys2008 · sys工具箱 · 项目托管于 <a href="https://gitee.com/sys200812" style="color:var(--primary-light)">Gitee</a></div>
       <div class="footer-links">
-        <a href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank">安卓版下载</a>
-        <a href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank">鸿蒙版下载</a>
+        <a id="footerApk" href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank">安卓版下载</a>
+        <a id="footerHap" href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank">鸿蒙版下载</a>
       </div>
     </div>
   </div>
 </footer>
 
 <script>
+// ===== Gitee API 集成 =====
+(function() {
+  const API_BASE = 'https://gitee.com/api/v5/repos';
+  const SHOW_COUNT = 8;
+
+  const repos = [
+    { owner: 'sys200812', repo: 'sys-calculator', ext: '.apk',  label: '安卓版', listId: 'androidChangelog', btnId: 'downloadApk', footerId: 'footerApk', metaId: 'androidMeta', toggleId: 'androidToggle' },
+    { owner: 'sys200812', repo: 'sys-toolkit',    ext: '.hap',  label: '鸿蒙版', listId: 'harmonyChangelog', btnId: 'downloadHap', footerId: 'footerHap', metaId: 'harmonyMeta', toggleId: 'harmonyToggle' }
+  ];
+
+  function esc(str) {
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function fmtSize(bytes) {
+    if (!bytes) return '';
+    var units = ['B', 'KB', 'MB', 'GB'];
+    var i = 0;
+    while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+    return bytes.toFixed(1) + ' ' + units[i];
+  }
+
+  function extractChangelog(body) {
+    if (!body) return '';
+    var text = body.replace(/^#{1,6}\s+/gm, '');
+    var lines = text.split(/\r?\n/);
+    for (var i = 0; i < Math.min(lines.length, 3); i++) {
+      var line = lines[i].trim();
+      if (line && !line.startsWith('---') && !line.startsWith('![') && !line.startsWith('<')) {
+        if (line.length > 80) line = line.substring(0, 80) + '...';
+        return line;
+      }
+    }
+    return '';
+  }
+
+  function renderChangelog(releases, listId, toggleId) {
+    var list = document.getElementById(listId);
+    var toggle = document.getElementById(toggleId);
+    if (!list || !releases.length) {
+      if (list) list.innerHTML = '<li>暂无更新数据</li>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < releases.length; i++) {
+      var r = releases[i];
+      var version = r.tag_name || r.name || '';
+      var body = extractChangelog(r.body || '');
+      var date = '';
+      if (r.created_at) {
+        date = ' <small style="color:#64748b">' + esc(r.created_at.substring(0, 10)) + '</small>';
+      }
+      var cls = i >= SHOW_COUNT ? ' class="collapsed"' : '';
+      html += '<li' + cls + '><span class="changelog-version">' + esc(version) + '</span>' + esc(body) + date + '</li>';
+    }
+    list.innerHTML = html;
+
+    if (releases.length > SHOW_COUNT && toggle) {
+      toggle.style.display = 'block';
+      toggle.textContent = '展开全部 (' + releases.length + ' 个版本) ▾';
+      toggle._expanded = false;
+    }
+  }
+
+  function findAsset(releases, ext) {
+    for (var i = 0; i < releases.length; i++) {
+      var assets = releases[i].assets || [];
+      for (var j = 0; j < assets.length; j++) {
+        if (assets[j].name && assets[j].name.toLowerCase().endsWith(ext)) {
+          return { release: releases[i], asset: assets[j] };
+        }
+      }
+    }
+    return null;
+  }
+
+  function updateDownload(releases, btnId, footerId, metaId, ext) {
+    var found = findAsset(releases, ext);
+    if (!found) return;
+
+    var url = found.asset.browser_download_url;
+    if (!url) return;
+
+    var btn = document.getElementById(btnId);
+    if (btn) btn.href = url;
+
+    var footer = document.getElementById(footerId);
+    if (footer) footer.href = url;
+
+    var meta = document.getElementById(metaId);
+    if (meta) {
+      var version = found.release.tag_name || found.release.name || '';
+      var size = fmtSize(found.asset.size);
+      meta.textContent = '最新版本: ' + version + (size ? ' | ' + size : '');
+    }
+  }
+
+  repos.forEach(function(cfg) {
+    fetch(API_BASE + '/' + cfg.owner + '/' + cfg.repo + '/releases?page=1&per_page=100')
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(releases) {
+        releases.reverse();
+        renderChangelog(releases, cfg.listId, cfg.toggleId);
+        updateDownload(releases, cfg.btnId, cfg.footerId, cfg.metaId, cfg.ext);
+      })
+      .catch(function(err) {
+        console.warn('Gitee API 请求失败 (' + cfg.label + '):', err.message);
+        var list = document.getElementById(cfg.listId);
+        if (list) {
+          list.innerHTML = '<li><span class="changelog-version">' + esc(cfg.label) + '</span>请前往 Gitee Releases 查看更新日志</li>';
+        }
+        var meta = document.getElementById(cfg.metaId);
+        if (meta) {
+          meta.innerHTML = '无法获取版本信息，<a href="https://gitee.com/' + cfg.owner + '/' + cfg.repo + '/releases" target="_blank" class="repo-link">前往 Releases 页面</a>';
+        }
+      });
+  });
+})();
+
+// ===== 更新日志折叠/展开 =====
+function toggleChangelog(listId, toggleId) {
+  var list = document.getElementById(listId);
+  var toggle = document.getElementById(toggleId);
+  if (!list || !toggle) return;
+  var items = list.querySelectorAll('li.collapsed');
+  if (toggle._expanded) {
+    items.forEach(function(li) { li.classList.add('collapsed'); });
+    toggle.textContent = '展开全部 ▾';
+    toggle._expanded = false;
+  } else {
+    items.forEach(function(li) { li.classList.remove('collapsed'); });
+    toggle.textContent = '收起 ▴';
+    toggle._expanded = true;
+  }
+}
+
 // ===== Mobile Menu =====
 const menuToggle = document.getElementById('menuToggle');
 const navLinks = document.getElementById('navLinks');
