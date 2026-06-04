@@ -121,6 +121,24 @@
     }
     .menu-toggle:hover { background: rgba(255,255,255,0.1); }
 
+    /* ===== Mobile app icon (only on small screens) ===== */
+    .mobile-app-icon { display: none; }
+    @media (max-width: 640px) {
+      .mobile-app-icon {
+        display: flex; justify-content: center; align-items: center;
+        padding: clamp(6px, 1.5vw, 10px) 0; background: rgba(3,7,18,0.02);
+      }
+      .mobile-app-icon .app-icon {
+        width: clamp(72px, 18vw, 140px);
+        height: clamp(72px, 18vw, 140px);
+        border-radius: 18px; overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 18px rgba(99,102,241,0.08);
+        border: 1px solid rgba(255,255,255,0.04);
+        background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(167,139,250,0.04));
+      }
+      .mobile-app-icon .app-icon img { width:100%; height:100%; object-fit:cover; display:block; }
+    }
+
     /* ===== Hero ===== */
     .hero {
       padding: var(--space-xl) 0 var(--space-lg);
@@ -436,6 +454,13 @@
       font-size: clamp(20px, 3vw, 28px); font-weight: 900; color: white;
       box-shadow: 0 8px 32px rgba(99,102,241,0.3);
     }
+    .dev-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: inherit;
+      display: block;
+    }
     .dev-title { font-size: clamp(16px, 2.2vw, 20px); font-weight: 700; margin-bottom: var(--space-xs); }
     .dev-desc { font-size: clamp(12px, 1.5vw, 14px); color: var(--text-muted); margin-bottom: var(--space-md); line-height: 1.7; }
     .dev-links { display: flex; flex-wrap: wrap; gap: var(--space-xs); justify-content: center; }
@@ -517,12 +542,19 @@
 
     /* ---- ≤640px：大手机竖屏 ---- */
     @media (max-width: 640px) {
+      /* 减小 section#top 与 hero 顶部间距，避免与 mobile-app-icon 间距过大 */
+      section#top { padding-top: var(--space-xs); }
+      .hero { padding-top: var(--space-sm); }
       .hero-actions {
-        flex-direction: column; width: 100%;
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
       }
       .hero-actions .btn-primary,
       .hero-actions .btn-ghost {
-        width: 100%; justify-content: center;
+        width: min(360px, 90%);
+        max-width: 360px;
+        justify-content: center;
       }
       .platform-actions {
         flex-direction: column;
@@ -570,6 +602,13 @@
     </nav>
   </div>
 </header>
+
+<!-- Mobile app icon (only shown on small screens) -->
+<div class="mobile-app-icon" role="img" aria-label="sys工具箱">
+  <a href="#top" aria-label="打开 sys工具箱">
+    <div class="app-icon"><img src="icon.png" alt="sys工具箱"></div>
+  </a>
+</div>
 
 <main>
   <!-- Hero -->
@@ -635,10 +674,6 @@
         <div class="reveal reveal-delay-2">
           <div class="stat-number">2</div>
           <div class="stat-label">平台（Android + HarmonyOS）</div>
-        </div>
-        <div class="reveal reveal-delay-3">
-          <div class="stat-number">0</div>
-          <div class="stat-label">需要联网的功能</div>
         </div>
       </div>
     </div>
@@ -797,8 +832,8 @@
       <div class="section-kicker reveal">关于开发者</div>
       <h2 class="section-title reveal reveal-delay-1" style="text-align:center;">独立开发，持续打磨</h2>
       <div class="dev-card reveal reveal-delay-2">
-        <div class="dev-avatar">SY</div>
-        <h3 class="dev-title">宋阳烁 / sys</h3>
+        <div class="dev-avatar"><img src="image2.jpeg" alt="宋阳烁" loading="lazy" decoding="async"></div>
+        <h3 class="dev-title">宋阳烁</h3>
         <p class="dev-desc">
           sys工具箱由宋阳烁独立开发，专注于本地大模型与端侧 AI 应用。项目从「sys计算器」起步，逐步演进为涵盖数学计算与本地大模型的综合工具箱，始终坚持"纯本地、隐私优先"的设计理念。
         </p>
@@ -814,7 +849,7 @@
 <footer>
   <div class="container">
     <div class="footer-inner">
-      <div>© 2025 sys2008 · sys工具箱 · 项目托管于 <a href="https://gitee.com/sys200812" style="color:var(--primary-light)">Gitee</a></div>
+      <div>© 2026 宋阳烁 · sys工具箱 </div>
       <div class="footer-links">
         <a id="footerApk" href="https://gitee.com/sys200812/sys-calculator/releases" target="_blank">安卓版下载</a>
         <a id="footerHap" href="https://gitee.com/sys200812/sys-toolkit/releases" target="_blank">鸿蒙版下载</a>
@@ -852,14 +887,16 @@
     if (!body) return '';
     var text = body.replace(/^#{1,6}\s+/gm, '');
     var lines = text.split(/\r?\n/);
-    for (var i = 0; i < Math.min(lines.length, 3); i++) {
+    var out = [];
+    for (var i = 0; i < lines.length && out.length < 4; i++) {
       var line = lines[i].trim();
-      if (line && !line.startsWith('---') && !line.startsWith('![') && !line.startsWith('<')) {
-        if (line.length > 80) line = line.substring(0, 80) + '...';
-        return line;
-      }
+      if (!line) continue;
+      if (line.startsWith('---') || line.startsWith('![') || line.startsWith('<')) continue;
+      out.push(line);
     }
-    return '';
+    var result = out.join(' ');
+    if (result.length > 300) result = result.substring(0, 300) + '...';
+    return result;
   }
 
   function renderChangelog(releases, listId, toggleId) {
@@ -882,11 +919,18 @@
       html += '<li' + cls + '><span class="changelog-version">' + esc(version) + '</span>' + esc(body) + date + '</li>';
     }
     list.innerHTML = html;
+    // 保存默认显示数量，便于折叠/展开时重新计算
+    try { list.dataset.showCount = SHOW_COUNT; list.dataset.total = releases.length; } catch (e) {}
 
-    if (releases.length > SHOW_COUNT && toggle) {
-      toggle.style.display = 'block';
-      toggle.textContent = '展开全部 (' + releases.length + ' 个版本) ▾';
-      toggle._expanded = false;
+    if (toggle) {
+      if (releases.length > SHOW_COUNT) {
+        toggle.style.display = 'block';
+        toggle.textContent = '展开全部 (' + releases.length + ' 个版本) ▾';
+        toggle._expanded = false;
+      } else {
+        toggle.style.display = 'none';
+        toggle._expanded = false;
+      }
     }
   }
 
@@ -953,13 +997,14 @@ function toggleChangelog(listId, toggleId) {
   var list = document.getElementById(listId);
   var toggle = document.getElementById(toggleId);
   if (!list || !toggle) return;
-  var items = list.querySelectorAll('li.collapsed');
+  var showCount = parseInt(list.dataset.showCount, 10) || 8;
+  var items = list.querySelectorAll('li');
   if (toggle._expanded) {
-    items.forEach(function(li) { li.classList.add('collapsed'); });
-    toggle.textContent = '展开全部 ▾';
+    items.forEach(function(li, idx) { if (idx >= showCount) li.classList.add('collapsed'); });
+    toggle.textContent = '展开全部 (' + (list.dataset.total || items.length) + ' 个版本) ▾';
     toggle._expanded = false;
   } else {
-    items.forEach(function(li) { li.classList.remove('collapsed'); });
+    items.forEach(function(li, idx) { if (idx >= showCount) li.classList.remove('collapsed'); });
     toggle.textContent = '收起 ▴';
     toggle._expanded = true;
   }
